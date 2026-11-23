@@ -28,9 +28,9 @@ type ServerSpec struct {
 }
 
 type Tool struct {
-	Name        string         // name shown to the model
-	Server      string         // "" for the built-in workspace server
-	Remote      string         // tool name on its server
+	Name        string // name shown to the model
+	Server      string // "" for the built-in workspace server
+	Remote      string // tool name on its server
 	Description string
 	Schema      map[string]any // JSON Schema of the input
 	ReadOnly    bool

@@ -41,13 +41,13 @@ type Config struct {
 	Model           string
 	Effort          string // low, medium, high, xhigh, max
 	MaxTokens       int64
-	MaxIterations   int     // model calls per task
-	CompactAtTokens int64   // compact when a request reads this many tokens
-	RepeatLimit     int     // identical calls before the loop guard trips
-	FailRoundLimit  int     // consecutive all-failing tool rounds before stopping
-	Fallbacks       bool    // server-side refusal fallbacks
-	ShowThinking    bool    // ask for summarized thinking, shown in the timeline
-	DataDir         string  // journals live in DataDir/journal
+	MaxIterations   int    // model calls per task
+	CompactAtTokens int64  // compact when a request reads this many tokens
+	RepeatLimit     int    // identical calls before the loop guard trips
+	FailRoundLimit  int    // consecutive all-failing tool rounds before stopping
+	Fallbacks       bool   // server-side refusal fallbacks
+	ShowThinking    bool   // ask for summarized thinking, shown in the timeline
+	DataDir         string // journals live in DataDir/journal
 	MCPServers      map[string]mcphub.ServerSpec
 	DefaultBudget   float64 // USD
 }

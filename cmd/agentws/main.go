@@ -225,6 +225,9 @@ func cmdServe(ctx context.Context, args []string) error {
 	if err := srv.Start(ctx); err != nil {
 		return err
 	}
+	if srv.Token == "" && !strings.HasPrefix(*addr, "127.0.0.1") && !strings.HasPrefix(*addr, "localhost") {
+		slog.Warn("listening beyond localhost without AGENTWS_TOKEN: anyone who can reach this port can run commands in the workspace")
+	}
 
 	hs := &http.Server{Addr: *addr, Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
