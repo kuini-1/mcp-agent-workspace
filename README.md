@@ -1,5 +1,7 @@
 # MCP Agent Workspace
 
+[![ci](https://github.com/kuini-1/mcp-agent-workspace/actions/workflows/ci.yml/badge.svg)](https://github.com/kuini-1/mcp-agent-workspace/actions/workflows/ci.yml)
+
 A self-hosted coding agent that works through tasks in a sandboxed folder, keeps state across restarts, asks before risky actions, and writes a debug log whenever something fails.
 
 It is built in Go on the [Model Context Protocol](https://modelcontextprotocol.io): every tool the agent uses, including its own file and shell tools, is served over MCP, so you can plug in any MCP server (GitHub, fetch, databases) next to them. A React dashboard shows each task's timeline, pending approvals, debug notes, and token cost.
