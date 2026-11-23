@@ -134,6 +134,11 @@ func (s *Store) SetStatus(ctx context.Context, id, status, reason string) error 
 	return err
 }
 
+func (s *Store) SetBudget(ctx context.Context, id string, usd float64) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE tasks SET budget_usd = ?, updated_at = ? WHERE id = ?`, usd, now(), id)
+	return err
+}
+
 func (s *Store) SetSummary(ctx context.Context, id, summary string) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE tasks SET summary = ?, updated_at = ? WHERE id = ?`, summary, now(), id)
 	return err

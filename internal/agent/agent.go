@@ -76,6 +76,8 @@ type Runner struct {
 	Cfg      Config
 	// OnEvent, if set, is called for every timeline event (the CLI prints them).
 	OnEvent func(store.Event)
+	// ClientFor, if set, overrides LLM per task (the demo gives each task its own script).
+	ClientFor func(taskID string) MessageClient
 }
 
 // NewTaskID returns a short random id like "t_3f9a1c2b7d".
@@ -163,8 +165,14 @@ func (r *Runner) Run(ctx context.Context, taskID string) (err error) {
 	}
 	defer hub.Close()
 
+	rr := r
+	if r.ClientFor != nil {
+		cp := *r
+		cp.LLM = r.ClientFor(t.ID)
+		rr = &cp
+	}
 	x := &run{
-		Runner: r, task: t, hub: hub, jr: jr,
+		Runner: rr, task: t, hub: hub, jr: jr,
 		guard:  newGuard(r.Cfg.RepeatLimit, r.Cfg.FailRoundLimit),
 		system: systemPrompt(t.Workdir),
 		tools:  buildTools(hub.Tools()),
@@ -386,15 +394,15 @@ func (x *run) runTools(ctx context.Context, calls []anthropic.BetaToolUseBlock) 
 		if err != nil {
 			return outcome{}, err
 		}
+		x.emit(ctx, x.task.ID, "tool_result", map[string]any{
+			"id": tu.ID, "name": tu.Name, "is_error": isErr, "output": clip(result, 4000),
+		})
 		if isErr {
 			failures++
 			if n, jerr := x.jr.ToolFailure(tu.Name, string(input), result); jerr == nil {
 				x.emit(ctx, x.task.ID, "debug_note", map[string]any{"attempt": n, "tool": tu.Name, "path": x.jr.Path()})
 			}
 		}
-		x.emit(ctx, x.task.ID, "tool_result", map[string]any{
-			"id": tu.ID, "name": tu.Name, "is_error": isErr, "output": clip(result, 4000),
-		})
 		blocks = append(blocks, UserBlock{Type: "tool_result", ToolUseID: tu.ID, Content: result, IsError: isErr})
 	}
 
