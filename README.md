@@ -36,6 +36,14 @@ make build
 ./bin/agentws run --workdir ./my-project "add a --verbose flag to main.go and test it"
 ```
 
+**Local model, no API key.** [Ollama](https://ollama.com) serves the Anthropic Messages API, and the Go SDK reads `ANTHROPIC_BASE_URL`, so a local model runs through the same code path with no changes:
+
+```bash
+ollama pull qwen3:4b-instruct
+export ANTHROPIC_BASE_URL=http://127.0.0.1:11434 ANTHROPIC_API_KEY=ollama
+./bin/agentws run --model qwen3:4b-instruct --approval auto --yes --workdir ./scratch "create fizzbuzz.py, run it and check the output"
+```
+
 **Docker.** The server listens on all interfaces inside the container, so set a token:
 
 ```bash
@@ -140,6 +148,23 @@ Flags override environment variables (see `.env.example`). MCP servers and per-s
 
 All model calls go to the Anthropic Messages API through the official Go SDK (`anthropic-sdk-go`), using adaptive thinking and summarized thinking in the timeline. Server-side refusal fallbacks are on, so a declined request can be served by a fallback model in the same call. Usage is billed to your Anthropic account under Anthropic's commercial terms. The price table in `internal/agent/pricing.go` reflects list prices as of November 2026; update it if prices change.
 
+### A real run on a local model
+
+The demo replays a scripted conversation. To see the loop work with a model that makes its own decisions, two tasks were run on qwen3-4b (instruct) through Ollama on an Apple M1, with the command above. Full transcripts are in [`docs/local-model-run/`](docs/local-model-run/).
+
+| Task | Result | Model calls | Output tokens | Time |
+|---|---|---|---|---|
+| Create `greet.sh` that greets the name in its first argument, then run it to check it works | Done. It listed the folder, wrote the script, made it executable, ran it with `Alice`, and finished. | 4 | 425 | 1.5 min |
+| Create `fizzbuzz.py` for 1-15, run it with python3 and check the output | Done, with a detour. The first version was correct, but the model misread its own correct output ("FizzBuzz at position 14, should be 15"), rewrote the file unchanged, ran it again and finished. | 6 | 1,868 | 4.7 min |
+
+Both scripts are correct ([`greet.sh`](docs/local-model-run/greet.sh), [`fizzbuzz.py`](docs/local-model-run/fizzbuzz.py)).
+
+What this run does and doesn't show:
+
+- It shows the parts that don't depend on the model working end to end with a model that decides for itself: tool calls over MCP, the approval policy (auto mode), finishing a task, and usage stored per call (cost $0 for an unpriced local model).
+- The FizzBuzz detour is the kind of wasted step the loop guard exists for, but it didn't trigger. The guard stops the third identical call, and the model repeated `write_file` and `run_shell` only once each.
+- Ollama accepts the request's Claude-specific fields and ignores them: adaptive thinking, effort and refusal fallbacks. Nothing here measures those features, or how Claude would do on these tasks.
+
 ## Tests
 
 ```bash
@@ -154,10 +179,12 @@ The agent tests drive the real loop, the real MCP tools and a real SQLite databa
 - One user, no accounts. The optional bearer token is the only access control.
 - The demo replays fixed responses; it does not react to what you approve or deny.
 - Token counts estimate cost from list prices. Your invoice is the source of truth.
+- Local models through Ollama run the same loop, but Ollama ignores thinking, effort and refusal fallbacks, and a 4B model wastes steps that a larger model may not (see the local run above).
 
 ## Lessons learned
 
 - **Editing history breaks more than the cache.** Injecting a status line into an earlier message, or trimming old tool results, looks harmless. With thinking blocks bound to their conversation, it causes hard 400 errors. Keeping the history strictly append-only, with a test that enforces it, rules that out.
 - **A non-zero exit code is a failure, even when the tool "worked".** If `exit 1` counted as a successful call, failed builds would never reach the guards or the debug notes. Marking it as a tool error is what makes the notes useful.
 - **An iteration cap alone doesn't stop loops.** The common failure is the same call with the same arguments, retried in slightly different words. Hashing normalized arguments catches it within three tries instead of sixty.
+- **A compatible API isn't the same API.** Ollama's Anthropic endpoint accepted every Claude-specific field this agent sends (adaptive thinking, effort, refusal fallbacks, beta headers) and silently ignored them. The run worked, which is exactly why it's easy to over-read: it exercised the loop, not those features.
 - **Scripted model responses make agent code testable.** Swapping only the model for canned responses, and keeping real tools, a real database and real MCP transport, gives fast, deterministic tests of the parts that break most often.
