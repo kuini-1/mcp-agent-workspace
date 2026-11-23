@@ -1,0 +1,19 @@
+# runtime data
+/data/
+/workspace/
+*.db
+*.db-shm
+*.db-wal
+
+# build output
+/bin/
+/agentws
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
+
+# local config and secrets
+.env
+agentws.json
+
+.DS_Store
