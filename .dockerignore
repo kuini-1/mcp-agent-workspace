@@ -1,0 +1,10 @@
+.git
+bin
+data
+workspace
+web/node_modules
+web/dist
+docs
+*.db
+.env
+agentws.json
